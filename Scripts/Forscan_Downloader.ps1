@@ -56,7 +56,6 @@ Function Get-PublicVersion {
             $b = [version]$a.Replace('.beta', '').Replace(".test", '')
             $b = [version]::New($b.Major, $b.Minor, $b.Build + 1)
             $Global:TestVer1 = $b.ToString()
-            return $a
         }
         else {
             Write-Host "Unable to Scrape Release version from FORScan Site | Error: $($_.Exception.Message)" -ForegroundColor Red 
@@ -65,7 +64,6 @@ Function Get-PublicVersion {
     else {
         Write-Host "Unable to Scrape Release version from FORScan Site | Error: $($_.Exception.Message)" -ForegroundColor Red
     }
-    Return $null
 }
 
 Function Get-PublicFile {
@@ -128,7 +126,6 @@ Function Get-SetupFile {
     # Write-Output "Get-SetupFile | URL: $url | FILE: $file | VER: $ver | TYPE: $type"
     try {
         $req = Invoke-WebRequest -uri $url -Method GET -TimeoutSec 15 -ErrorAction SilentlyContinue
-        # Write-Output $req
         if ($req.StatusCode -eq 200) {
             $fileContent = $req.Content
             $fileSize = Format-Size -bytes $req.Headers['Content-Length']
@@ -183,7 +180,7 @@ Function Start-Execution {
     Get-PublicVersion
     Write-Host "************** SCRIPT PARAMETERS ***************" -ForegroundColor Blue
     Write-Host "*" -NoNewline -ForegroundColor Blue
-    Write-Host " Test Version Flag: $($TestVersions)"
+    Write-Host " -TestVersion Flag: $($TestVersions)"
     If ($TestVersions -eq $true) {
         Write-Host "*" -NoNewline -ForegroundColor Blue
         Write-Host " Test Version: ($Global:TestVer1)"
