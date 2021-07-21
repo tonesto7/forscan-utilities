@@ -8,14 +8,6 @@
     .PARAMETER $TestVersions
         This enables the script to look for test versions of Forscan.
 
-    .PARAMETER $TestVer1
-        This is the first version of the test setup files you want to download.
-        It's the latest v2.3.x.x test version
-
-    .PARAMETER $TestVer2
-        This is the second version of the test setup files you want to download.
-        It's the latest v2.4.x.x test version with module programmability.
-
     .PARAMETER $MaxDays
         This is the number of days back to search from todays date to start downloading the files.
 
@@ -28,18 +20,17 @@ param (
     [Parameter()]
     [switch]$TestVersions,
     [Parameter()]
-    $TestVer1 = "2.3.42",
-    [Parameter()]
-    $TestVer2 = "2.4.3",
-    [Parameter()]
     $MaxDays = 90
 )
-# $TestVersions = $true
+
 $ProgressPreference = "SilentlyContinue"
 $rootUrl = "https://forscan.org/download"
 $saveFileRoot = $PSScriptRoot
 $saveFileFolder = "FORScanSetup"
 $Global:filesFound = @()
+$Global:publicVer = $null
+$Global:TestVer1 = $null
+$Global:TestVer2 = '2.4.3'
 
 Function Format-Size {
     param(
@@ -53,41 +44,59 @@ Function Format-Size {
     "{0:N$($N)} {1}" -f $Bytes, $sizes[$i]
 }
 
-Function Get-ReleaseVersion {
+Function Get-PublicVersion {
     $url = "https://forscan.org/download.html"
     $WebResponse = Invoke-WebRequest $url -TimeoutSec 15 -ErrorAction SilentlyContinue
     if ($WebResponse.StatusCode -eq 200) {
         $links = $WebResponse.Links | Where-Object { $_.href.StartsWith("download/FORScanSetup") } | Select-Object href
         if ($links.Count -gt 0) {
-            $fileName = $links[0].href.Replace("download/", '')
-            if ((Get-SetupFile -url "$rootUrl/$fileName" -file $fileName -ver $null -type "Release") -eq $true) {
-                # Write-Host "Found $fileName"
-            }
+            $a = $links[0].href.Replace("download/FORScanSetup", '')
+            $a = $a.Replace(".exe", '')
+            $Global:publicVer = $a
+            $b = [version]$a.Replace('.beta', '').Replace(".test", '')
+            $b = [version]::New($b.Major, $b.Minor, $b.Build + 1)
+            $Global:TestVer1 = $b.ToString()
+            return $a
         }
         else {
-            Write-Output "Unable to Scrape Release version from FORScan Site | Error: $($_.Exception.Message)"
+            Write-Host "Unable to Scrape Release version from FORScan Site | Error: $($_.Exception.Message)" -ForegroundColor Red 
         }
     }
     else {
-        Write-Output "Unable to Scrape Release version from FORScan Site | Error: $($_.Exception.Message)"
+        Write-Host "Unable to Scrape Release version from FORScan Site | Error: $($_.Exception.Message)" -ForegroundColor Red
+    }
+    Return $null
+}
+
+Function Get-PublicFile {
+    if ($Global:publicVer) {
+        $fileName = "FORScanSetup$($Global:publicVer).exe"
+        if ((Get-SetupFile -url "$rootUrl/$fileName" -file $fileName -ver $null -type "Release") -eq $true) {
+            # Write-Host "Found $fileName"
+        }
+    }
+    else {
+        Write-Host "Can't download public version because PublicVer variable is missing..." -ForegroundColor Yellow
     }
 }
 
-Function Get-TestVersions {
+Function Get-TestVersionFiles {
     param(
         [Parameter(Mandatory = $true)]
         [String]$ver1, 
-        [Parameter(Mandatory = $true)]
+        [Parameter()]
         [String]$ver2, 
         [Parameter(Mandatory = $true)]
         [int]$maxDays
     )
+    $versions = @($ver1)
+    if ($null -ne $ver2) { $versions += $ver2 }
     Write-Host ""
     Write-Host "****************** TEST VERSION DOWNLOAD *******************" -ForegroundColor Magenta
     Write-Host "Search Date Start: $((get-date).ToString("MM-dd-yyyy"))" -ForegroundColor Magenta
     Write-Host "Search Date End: $((get-date).AddDays(-$maxDays).ToString("MM-dd-yyyy"))" -ForegroundColor Magenta
     Write-Host "******************** RESULTS START ********************" -ForegroundColor White
-    foreach ($version in @("$ver1", "$ver2")) {
+    foreach ($version in $versions) {
         $fileDate = (get-date).ToString("yyyyMMdd")
         Write-Host "Searching for Setup Files | Version: (v$version)" -ForegroundColor DarkCyan
         for ($i = 0; ($i -lt ($maxDays + 1)); $i++) {
@@ -168,30 +177,36 @@ Function Get-SetupFile {
     return $false
 }
 
-# Downloads the Current Public Release Version of FORScanSetup
-Write-Host "************** SCRIPT PARAMETERS ***************" -ForegroundColor Blue
-Write-Host "*" -NoNewline -ForegroundColor Blue
-Write-Host " Test Version Flag: $($TestVersions)"
-If ($TestVersions -eq $true) {
-    Write-Host "*" -NoNewline -ForegroundColor Blue
-    Write-Host " Test Version 1: ($TestVer1)"
-    Write-Host "*" -NoNewline -ForegroundColor Blue
-    Write-Host " Test Version 2: ($TestVer2)"
-    Write-Host "*" -NoNewline -ForegroundColor Blue
-    Write-Host " Days to Search: ($MaxDays)"
-}
-Write-Host "************************************************" -ForegroundColor Blue
-Write-Host ""
-Write-Host "************** RELEASE VERSION DOWNLOAD*******************" -ForegroundColor White
-Get-ReleaseVersion
-Write-Host "**************************************************" -ForegroundColor White
 
-if ($TestVersions) {
-    Get-TestVersions -ver1 $TestVer1 -ver2 $TestVer2 -maxDays $MaxDays
-    if (!($Global:filesFound.Count -gt 0)) {
-        Write-Host "No Test Versions Found for these Versions ($TestVer1, $TestVer2) between [$((get-date).ToString("yyyyMMdd")) - $((get-date).AddDays(-$MaxDays).ToString("yyyyMMdd"))]" -ForegroundColor Yellow
+Function Start-Execution {
+    # Downloads the Current Public Release Version of FORScanSetup
+    Get-PublicVersion
+    Write-Host "************** SCRIPT PARAMETERS ***************" -ForegroundColor Blue
+    Write-Host "*" -NoNewline -ForegroundColor Blue
+    Write-Host " Test Version Flag: $($TestVersions)"
+    If ($TestVersions -eq $true) {
+        Write-Host "*" -NoNewline -ForegroundColor Blue
+        Write-Host " Test Version: ($Global:TestVer1)"
+        Write-Host "*" -NoNewline -ForegroundColor Blue
+        Write-Host " Test Version (2.4.x): ($Global:TestVer2)"
+        Write-Host "*" -NoNewline -ForegroundColor Blue
+        Write-Host " Days to Search: ($MaxDays)"
     }
-}
+    Write-Host "************************************************" -ForegroundColor Blue
+    Write-Host ""
+    Write-Host "************** RELEASE VERSION DOWNLOAD*******************" -ForegroundColor White
+    Write-Host "* Public Version: ($Global:publicVer)"
+    Get-PublicFile
+    Write-Host "**************************************************" -ForegroundColor White
 
-Write-Host ""
-Write-Host "Script Execution is Now Complete..." -ForegroundColor Cyan
+    if ($TestVersions) {
+        Get-TestVersionFiles -ver1 $Global:TestVer1 -ver2 $Global:TestVer2 -maxDays $MaxDays
+        if (!($Global:filesFound.Count -gt 0)) {
+            Write-Host "No Test Versions Found for these Versions ($Global:TestVer1, $Global:TestVer2) between [$((get-date).ToString("yyyyMMdd")) - $((get-date).AddDays(-$MaxDays).ToString("yyyyMMdd"))]" -ForegroundColor Yellow
+        }
+    }
+
+    Write-Host ""
+    Write-Host "Script Execution is Now Complete..." -ForegroundColor Cyan
+}
+Start-Execution
