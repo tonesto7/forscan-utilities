@@ -46,11 +46,11 @@ Function Format-Size {
 
 Function Get-PublicVersion {
     $url = "https://forscan.org/download.html"
-    $WebResponse = Invoke-WebRequest $url -TimeoutSec 15 -ErrorAction SilentlyContinue
+    $WebResponse = Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 15 -ErrorAction SilentlyContinue
     if ($WebResponse.StatusCode -eq 200) {
-        $links = $WebResponse.Links | Where-Object { $_.href.StartsWith("download/FORScanSetup") } | Select-Object href
+        $links = $WebResponse.Links.href | Where-Object { $_ -like "download/FORScanSetup*" }
         if ($links.Count -gt 0) {
-            $a = $links[0].href.Replace("download/FORScanSetup", '')
+            $a = $links[0].Replace("download/FORScanSetup", '')
             $a = $a.Replace(".exe", '')
             $Global:publicVer = $a
             $b = [version]$a.Replace('.beta', '').Replace(".test", '')
