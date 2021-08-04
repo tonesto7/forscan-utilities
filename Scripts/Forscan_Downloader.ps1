@@ -125,7 +125,7 @@ Function Get-SetupFile {
     )
     # Write-Output "Get-SetupFile | URL: $url | FILE: $file | VER: $ver | TYPE: $type"
     try {
-        $req = Invoke-WebRequest -uri $url -Method GET -TimeoutSec 15 -ErrorAction SilentlyContinue
+        $req = Invoke-WebRequest -uri $url -Method GET -UseBasicParsing -TimeoutSec 15 -ErrorAction SilentlyContinue
         if ($req.StatusCode -eq 200) {
             $fileContent = $req.Content
             $fileSize = Format-Size -bytes $req.Headers['Content-Length']
