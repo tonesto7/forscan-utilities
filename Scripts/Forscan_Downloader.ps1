@@ -96,6 +96,7 @@ Function Get-TestVersionFiles {
     Write-Host "******************** RESULTS START ********************" -ForegroundColor White
     foreach ($version in $versions) {
         $fileDate = (get-date).ToString("yyyyMMdd")
+        $fnd = $false
         Write-Host "Searching for Setup Files | Version: (v$version)" -ForegroundColor DarkCyan
         for ($i = 0; ($i -lt ($maxDays + 1)); $i++) {
             if ($i -gt 0) { Start-Sleep -s 1.5 }
@@ -103,8 +104,13 @@ Function Get-TestVersionFiles {
             $result = (Get-SetupFile -url "$($rootUrl)/$($fileName)" -file $fileName -fileDate $fileDate -ver $version -type "Test")
             $fileDate = (get-date).AddDays(-$i).ToString("yyyyMMdd")
             if ($result -eq $true) {
+                $fnd = $true
                 break
             }
+        }
+        if (!($fnd)) { 
+            Write-Host ""
+            Write-Host "No Files Found for $version"
         }
     }
     Write-Host "******************** RESULTS END ********************" -ForegroundColor Magenta
