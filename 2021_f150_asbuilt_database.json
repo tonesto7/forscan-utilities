@@ -1,3 +1,18 @@
 {
-  
+    "version": "0.0.1",
+    "description": "",
+    "author": "tonesto7",
+    "modified": "2021-08-20",
+    "model_years": ["MY2021", "MY2022"],
+    "modules": [{
+        "id": "760",
+        "name": "ABS",
+        "description": "Anti-Lock Braking Module",
+        "760-01-01": {
+            "mask_blocks": [{
+                "length": 2,
+                "a": "https://github.com/consp/apim-asbuilt-decode/blob/master/src/asbuilt.py"
+            }]
+        }
+    }]
 }
