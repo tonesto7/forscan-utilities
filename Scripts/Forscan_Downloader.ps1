@@ -20,7 +20,7 @@ param (
     [Parameter()]
     [switch]$TestVersions,
     [Parameter()]
-    $MaxDays = 90
+    $MaxDays = 30
 )
 
 $ProgressPreference = "SilentlyContinue"
@@ -53,7 +53,7 @@ Function Get-PublicVersion {
             $a = $links[0].Replace("download/FORScanSetup", '')
             $a = $a.Replace(".exe", '')
             $Global:publicVer = $a
-            $b = [version]$a.Replace('.beta', '').Replace(".test", '')
+            $b = [version]$a.Replace('.release', '').Replace('.beta', '').Replace(".test", '')
             $b = [version]::New($b.Major, $b.Minor, $b.Build + 1)
             $Global:TestVer1 = $b.ToString()
         }
