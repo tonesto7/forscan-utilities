@@ -11,7 +11,7 @@
         "760-01-01": {
             "mask_blocks": [{
                 "length": 2,
-                "a": "https://github.com/consp/apim-asbuilt-decode/blob/master/src/asbuilt.py"
+                "a": ""
             }]
         }
     }]
